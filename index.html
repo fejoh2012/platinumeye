@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PlatinumEye</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="gameCanvas" aria-label="PlatinumEye game view"></canvas>
+
+      <section id="lobby" class="lobby" aria-label="Join match">
+        <div class="brand-mark">
+          <span class="brand-kicker">MI-97 FIELD SIM</span>
+          <h1>PLATINUMEYE</h1>
+          <p>Pick your operator, scout your battleground, deploy.</p>
+        </div>
+
+        <section class="lobby-panel loadout-panel" aria-label="Loadout">
+          <header class="lobby-panel-head">
+            <span class="lobby-panel-step">01</span>
+            <h2>Loadout</h2>
+            <p>Choose your operator avatar.</p>
+          </header>
+          <div id="avatarGrid" class="avatar-grid" role="radiogroup" aria-label="Choose avatar"></div>
+        </section>
+
+        <section class="lobby-panel mission-panel" aria-label="Mission">
+          <header class="lobby-panel-head">
+            <span class="lobby-panel-step">02</span>
+            <h2>Battleground</h2>
+            <p>Each map plays differently — pick your terrain.</p>
+          </header>
+          <div id="mapGrid" class="map-grid" role="radiogroup" aria-label="Choose map"></div>
+        </section>
+
+        <form id="joinForm" class="lobby-panel join-panel" aria-label="Deploy">
+          <header class="lobby-panel-head">
+            <span class="lobby-panel-step">03</span>
+            <h2>Deploy</h2>
+            <p>Enter a room code or quick-join.</p>
+          </header>
+          <div class="join-fields">
+            <label>
+              <span>Call sign</span>
+              <input id="nameInput" name="name" maxlength="16" autocomplete="nickname" value="Agent" />
+            </label>
+            <label>
+              <span>Room</span>
+              <input id="roomInput" name="room" maxlength="8" autocomplete="off" placeholder="AUTO" />
+            </label>
+            <label>
+              <span>Bots</span>
+              <input id="botInput" name="bots" type="number" min="0" max="6" step="1" inputmode="numeric" value="2" />
+            </label>
+          </div>
+          <div class="join-actions">
+            <button id="quickJoinButton" type="button">Quick Room</button>
+            <button type="submit">Deploy</button>
+          </div>
+        </form>
+      </section>
+
+      <div id="hud" class="hud is-hidden" aria-live="polite">
+        <div class="top-strip">
+          <div class="room-chip">
+            <span>ROOM</span>
+            <strong id="roomCode">----</strong>
+          </div>
+          <div class="room-chip map-chip">
+            <span>MAP</span>
+            <strong id="mapName">--</strong>
+          </div>
+          <div id="matchStatus" class="match-status" aria-live="polite"></div>
+          <div id="feed" class="feed"></div>
+          <button id="copyRoomButton" class="icon-button" type="button" title="Copy room link" aria-label="Copy room link">LINK</button>
+        </div>
+
+        <div class="reticle" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <div id="hitMarker" class="hit-marker" aria-hidden="true"></div>
+        <div id="damageFlash" class="damage-flash" aria-hidden="true"></div>
+
+        <div class="status-bar">
+          <div class="meter health-meter">
+            <span>HLTH</span>
+            <strong id="healthValue">100</strong>
+            <i id="healthFill"></i>
+          </div>
+          <div class="meter armor-meter">
+            <span>ARMR</span>
+            <strong id="armorValue">0</strong>
+            <i id="armorFill"></i>
+          </div>
+          <div class="weapon-readout">
+            <span id="weaponName">Sentinel</span>
+            <strong id="ammoValue">--</strong>
+          </div>
+          <div id="weaponInventory" class="weapon-inventory" aria-label="Weapon inventory"></div>
+        </div>
+
+        <canvas id="minimap" class="minimap" width="220" height="170" aria-label="Arena radar"></canvas>
+
+        <div id="scoreboard" class="scoreboard" aria-label="Scoreboard">
+          <div class="scoreboard-head">
+            <span>AGENT</span>
+            <span>K</span>
+            <span>D</span>
+          </div>
+          <div id="scoreRows"></div>
+        </div>
+
+        <div id="lockPrompt" class="lock-prompt">
+          <strong>CLICK TO ENTER</strong>
+          <em>WASD move · SPACE jump · CTRL/C crouch · SHIFT sprint</em>
+        </div>
+
+        <div id="deathScreen" class="death-screen is-hidden">
+          <strong id="deathTitle">DOWN</strong>
+          <span id="respawnTimer">3.0</span>
+        </div>
+
+        <div class="touch-controls" aria-hidden="true">
+          <div id="movePad" class="move-pad"><span id="moveKnob"></span></div>
+          <button id="touchFire" type="button" class="touch-fire">FIRE</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

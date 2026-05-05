@@ -1,0 +1,17 @@
+services:
+  platinumeye:
+    build: .
+    container_name: platinumeye
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "5173"
+    ports:
+      - "5173:5173"
+    networks:
+      - default
+      - twenty_default
+
+networks:
+  twenty_default:
+    external: true
