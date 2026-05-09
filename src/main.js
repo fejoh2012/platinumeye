@@ -3970,6 +3970,8 @@ function updateHud() {
   drawMinimap();
 }
 
+let _buyMenuLastCash = -1;
+
 function updateBombHud() {
   const b = state.bomb;
   if (b.mode !== "bomb") {
@@ -4020,8 +4022,6 @@ function updateBombHud() {
   // interact bar
   updateInteractBar();
 }
-
-let _buyMenuLastCash = -1;
 
 function renderBuyMenu() {
   if (!dom.buyMenu || !dom.buyGrid) return;
