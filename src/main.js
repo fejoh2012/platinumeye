@@ -3156,9 +3156,9 @@ function animate() {
   updateWater(time);
   updateAnimatedProps(dt, time);
   updateWeather(dt, time);
+  renderer.render(scene, camera);
   updateHud();
   updateBombHud();
-  renderer.render(scene, camera);
 }
 
 function updateAnimatedProps(dt, time) {
