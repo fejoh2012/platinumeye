@@ -254,6 +254,7 @@ const state = {
     cash: 0,
     plantHeld: false,
     defuseHeld: false,
+    buyMenuOpen: false,
   }
 };
 
@@ -2669,6 +2670,21 @@ function bindEvents() {
     if (weaponIndex >= 0 && weaponIndex < WEAPON_ORDER.length) {
       selectWeapon(WEAPON_ORDER[weaponIndex]);
     }
+    if (event.code === "KeyB" && state.bomb.mode === "bomb" && state.bomb.phase === "freeze") {
+      event.preventDefault();
+      if (state.bomb.buyMenuOpen) {
+        closeBuyMenu();
+      } else {
+        state.bomb.buyMenuOpen = true;
+        document.exitPointerLock?.();
+        renderBuyMenu();
+      }
+      return;
+    }
+    if (event.code === "Escape" && state.bomb.buyMenuOpen) {
+      closeBuyMenu();
+      return;
+    }
     if (event.code === "KeyF" && state.bomb.mode === "bomb") {
       state.bomb.plantHeld = true;
       state.bomb._plantStart = Date.now();
@@ -2950,6 +2966,7 @@ function wireSocket(socket) {
   socket.on("roundEnd", (data) => {
     state.bomb.scores = data.scores;
     state.bomb.phase = "end";
+    if (state.bomb.buyMenuOpen) closeBuyMenu();
     showRoundResult(data.winner);
   });
 
@@ -4011,16 +4028,24 @@ function updateBombHud() {
   const isBombCarrier = b.bombCarrierId === state.playerId;
   dom.bombIndicator.classList.toggle("is-hidden", !isBombCarrier && !b.bombPlanted);
 
-  // buy menu during freeze
-  if (b.phase === "freeze") {
+  // buy menu — only open when B was pressed during freeze
+  if (b.buyMenuOpen && b.phase === "freeze") {
     renderBuyMenu();
-  } else {
-    dom.buyMenu?.classList.add("is-hidden");
-    _buyMenuLastCash = -1;
+  } else if (b.buyMenuOpen && b.phase !== "freeze") {
+    closeBuyMenu();
   }
 
   // interact bar
   updateInteractBar();
+}
+
+function closeBuyMenu() {
+  state.bomb.buyMenuOpen = false;
+  dom.buyMenu?.classList.add("is-hidden");
+  _buyMenuLastCash = -1;
+  if (state.connected && !isTouchDevice()) {
+    dom.canvas.requestPointerLock?.()?.catch?.(() => {});
+  }
 }
 
 function renderBuyMenu() {
