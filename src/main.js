@@ -4357,6 +4357,15 @@ function playSound(type, weaponId = "sentinel", distance = 0) {
       playNoise(ctx, { volume: 0.05, duration: 0.18, filterType: "lowpass", filterFrequency: 320, start: now });
       playTone(ctx, { frequency: 90, endFrequency: 50, type: "sawtooth", volume: 0.04, duration: 0.16, start: now });
       break;
+    case "bombPlanted":
+      playBombSound(ctx, "plant");
+      break;
+    case "bombDefused":
+      playBombSound(ctx, "defuse");
+      break;
+    case "bombExplode":
+      playBombSound(ctx, "explode");
+      break;
     default:
       break;
   }
@@ -4514,6 +4523,22 @@ function playStepSound(ctx) {
   }
   playNoise(ctx, { volume, duration: 0.08, filterType, filterFrequency: filterFreq, start: now });
   playTone(ctx, { frequency: pitch, endFrequency: pitch * 0.7, type: "triangle", volume: 0.011, duration: 0.05, start: now });
+}
+
+function playBombSound(ctx, type) {
+  const now = ctx.currentTime;
+  if (type === "plant") {
+    playTone(ctx, { frequency: 880, endFrequency: 440, type: "sine", volume: 0.06, duration: 0.18, start: now });
+    playTone(ctx, { frequency: 660, endFrequency: 330, type: "sine", volume: 0.04, duration: 0.12, start: now + 0.22 });
+  } else if (type === "defuse") {
+    playTone(ctx, { frequency: 440, endFrequency: 880, type: "sine", volume: 0.06, duration: 0.2, start: now });
+    playTone(ctx, { frequency: 660, endFrequency: 1320, type: "sine", volume: 0.04, duration: 0.15, start: now + 0.24 });
+  } else if (type === "explode") {
+    // low boom
+    playTone(ctx, { frequency: 80, endFrequency: 20, type: "sawtooth", volume: 0.18, duration: 0.6, start: now });
+    playTone(ctx, { frequency: 200, endFrequency: 40, type: "square", volume: 0.1, duration: 0.4, start: now });
+    playTone(ctx, { frequency: 3000, endFrequency: 100, type: "sawtooth", volume: 0.06, duration: 0.2, start: now });
+  }
 }
 
 function playTone(ctx, { frequency, endFrequency, type = "sine", volume = 0.04, duration = 0.1, start = ctx.currentTime, sendReverb = false }) {
