@@ -1237,6 +1237,7 @@ input {
   min-width: 380px;
   backdrop-filter: blur(4px);
   z-index: 20;
+  pointer-events: auto;
 }
 
 .buy-menu-title {
