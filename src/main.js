@@ -15,6 +15,7 @@ import {
   PLAYER_EYE_HEIGHT,
   PLAYER_RADIUS,
   SCORE_LIMIT,
+  SHOP_ITEMS,
   TRAINING_BOT_COUNT,
   WEAPON_ORDER,
   WEAPONS
@@ -172,7 +173,22 @@ const dom = {
   moveKnob: document.querySelector("#moveKnob"),
   touchFire: document.querySelector("#touchFire"),
   damageNumbers: document.querySelector("#damageNumbers"),
-  scopeOverlay: document.querySelector("#scopeOverlay")
+  scopeOverlay: document.querySelector("#scopeOverlay"),
+  bombHud: document.querySelector("#bombHud"),
+  roundTimer: document.querySelector("#roundTimer"),
+  phaseLabel: document.querySelector("#phaseLabel"),
+  teamLabel: document.querySelector("#teamLabel"),
+  cashDisplay: document.querySelector("#cashDisplay"),
+  bombIndicator: document.querySelector("#bombIndicator"),
+  atkScore: document.querySelector("#atkScore"),
+  defScore: document.querySelector("#defScore"),
+  interactBar: document.querySelector("#interactBar"),
+  interactLabel: document.querySelector("#interactLabel"),
+  interactFill: document.querySelector("#interactFill"),
+  buyMenu: document.querySelector("#buyMenu"),
+  buyGrid: document.querySelector("#buyGrid"),
+  buyCash: document.querySelector("#buyCash"),
+  roundBanner: document.querySelector("#roundBanner")
 };
 
 const state = {
@@ -3137,6 +3153,7 @@ function animate() {
   updateAnimatedProps(dt, time);
   updateWeather(dt, time);
   updateHud();
+  updateBombHud();
   renderer.render(scene, camera);
 }
 
@@ -3947,6 +3964,103 @@ function updateHud() {
     dom.deathScreen.classList.add("is-hidden");
   }
   drawMinimap();
+}
+
+function updateBombHud() {
+  const b = state.bomb;
+  if (b.mode !== "bomb") {
+    dom.bombHud?.classList.add("is-hidden");
+    dom.buyMenu?.classList.add("is-hidden");
+    return;
+  }
+  dom.bombHud?.classList.remove("is-hidden");
+
+  // scores
+  dom.atkScore.textContent = b.scores.attack;
+  dom.defScore.textContent = b.scores.defend;
+
+  // timer
+  const remaining = Math.max(0, b.phaseEndsAt - Date.now());
+  const secs = Math.ceil(remaining / 1000);
+  const mm = String(Math.floor(secs / 60)).padStart(2, "0");
+  const ss = String(secs % 60).padStart(2, "0");
+  dom.roundTimer.textContent = `${mm}:${ss}`;
+  dom.roundTimer.classList.toggle("is-urgent", secs <= 10 && b.phase === "live");
+
+  // phase label
+  const phaseNames = { freeze: "BUY PHASE", live: "LIVE", planted: "BOMB PLANTED", end: "ROUND OVER", over: "MATCH OVER" };
+  dom.phaseLabel.textContent = phaseNames[b.phase] || "";
+
+  // team label
+  if (b.myTeam) {
+    dom.teamLabel.textContent = b.myTeam === "attack" ? "ATK" : "DEF";
+    dom.teamLabel.className = "team-label " + (b.myTeam === "attack" ? "atk" : "def");
+  }
+
+  // cash
+  dom.cashDisplay.textContent = `$${b.cash}`;
+
+  // bomb carrier indicator
+  const isBombCarrier = b.bombCarrierId === state.playerId;
+  dom.bombIndicator.classList.toggle("is-hidden", !isBombCarrier && !b.bombPlanted);
+
+  // buy menu during freeze
+  if (b.phase === "freeze") {
+    renderBuyMenu();
+  } else {
+    dom.buyMenu?.classList.add("is-hidden");
+  }
+
+  // interact bar
+  updateInteractBar();
+}
+
+function renderBuyMenu() {
+  if (!dom.buyMenu || !dom.buyGrid) return;
+  dom.buyMenu.classList.remove("is-hidden");
+  dom.buyCash.textContent = `$${state.bomb.cash}`;
+  dom.buyGrid.innerHTML = SHOP_ITEMS.map(item => {
+    const label = item.type === "weapon"
+      ? (WEAPONS[item.id]?.name || item.id)
+      : item.id === "armor50" ? "Light Armor" : "Full Armor";
+    const canAfford = state.bomb.cash >= item.cost;
+    return `<button class="buy-item" data-item="${item.id}" ${canAfford ? "" : "disabled"}>
+      <span class="buy-item-name">${label}</span>
+      <span class="buy-item-cost">$${item.cost}</span>
+    </button>`;
+  }).join("");
+
+  for (const btn of dom.buyGrid.querySelectorAll(".buy-item")) {
+    btn.addEventListener("click", () => {
+      state.socket.emit("buy", btn.dataset.item);
+    });
+  }
+}
+
+function updateInteractBar() {
+  // plant progress
+  const now = Date.now();
+  if (state.bomb.plantHeld && state.bomb.myTeam === "attack" && state.bomb.bombCarrierId === state.playerId && state.bomb.phase === "live") {
+    dom.interactBar?.classList.remove("is-hidden");
+    dom.interactLabel.textContent = "PLANTING";
+    dom.interactFill.style.width = Math.min(100, ((now - (state.bomb._plantStart || now)) / 3000) * 100) + "%";
+  } else if (state.bomb.defuseHeld && state.bomb.myTeam === "defend" && state.bomb.bombPlanted && state.bomb.phase === "planted") {
+    dom.interactBar?.classList.remove("is-hidden");
+    dom.interactLabel.textContent = "DEFUSING";
+    dom.interactFill.style.width = Math.min(100, ((now - (state.bomb._defuseStart || now)) / 5000) * 100) + "%";
+  } else {
+    dom.interactBar?.classList.add("is-hidden");
+    dom.interactFill.style.width = "0%";
+  }
+}
+
+function showRoundResult(winner) {
+  if (!dom.roundBanner) return;
+  const won = winner === state.bomb.myTeam;
+  dom.roundBanner.textContent = won ? "ROUND WIN" : "ROUND LOSS";
+  dom.roundBanner.className = "round-banner " + (won ? "win" : "loss");
+  dom.roundBanner.classList.remove("is-hidden");
+  setTimeout(() => dom.roundBanner.classList.add("is-hidden"), 3500);
 }
 
 function renderWeaponInventory() {
