@@ -1,5 +1,7 @@
 import { DEFAULT_AVATAR_ID, isAvatarId } from "../shared/avatars.js";
 import { DEFAULT_MAP_ID, getMap, isMapId } from "../shared/maps.js";
+import { BombGame } from "./bombGame.js";
+import { BOMB_MODES } from "../shared/constants.js";
 import {
   MAX_ARMOR,
   MAX_BOTS_PER_ROOM,
@@ -50,6 +52,8 @@ class GameRoom {
     }));
     this.lastActiveAt = Date.now();
     this.feed = [];
+    this.mode = this.arena.mode === "bomb" ? BOMB_MODES.BOMB : BOMB_MODES.DEATHMATCH;
+    this.bombGame = this.mode === BOMB_MODES.BOMB ? new BombGame(this) : null;
   }
 
   get size() {
@@ -77,6 +81,8 @@ class GameRoom {
       score: 0,
       deaths: 0,
       streak: 0,
+      team: null,
+      cash: null,
       isBot: false,
       weapon: "sentinel",
       ownedWeapons: ["sentinel"],
@@ -369,8 +375,10 @@ class GameRoom {
     this.ensureBots();
 
     for (const player of this.players.values()) {
-      if (!player.alive && player.respawnAt && now >= player.respawnAt) {
-        this.respawn(player);
+      if (this.mode === BOMB_MODES.DEATHMATCH) {
+        if (!player.alive && player.respawnAt && now >= player.respawnAt) {
+          this.respawn(player);
+        }
       }
     }
 
@@ -390,6 +398,11 @@ class GameRoom {
       if (!pickup.active && pickup.respawnAt <= now) {
         pickup.active = true;
       }
+    }
+    if (this.bombGame) {
+      this.bombGame.tickInteractions();
+      const bombEvents = this.bombGame.update();
+      for (const ev of bombEvents) events.push(ev);
     }
     return events;
   }
@@ -543,7 +556,9 @@ class GameRoom {
         ammo: serializeAmmo(player.ammo),
         respawnAt: player.respawnAt,
         yOffset: player.yOffset || 0,
-        crouch: player.crouch || 0
+        crouch: player.crouch || 0,
+        team: player.team || null,
+        cash: player.cash || 0
       })),
       pickups: this.pickups.map((pickup) => ({
         id: pickup.id,
@@ -553,7 +568,8 @@ class GameRoom {
         z: pickup.z,
         active: pickup.active
       })),
-      feed: this.feed
+      feed: this.feed,
+      bombRound: this.bombGame ? this.bombGame.serializeRound() : null
     };
   }
 }
@@ -611,6 +627,30 @@ export function registerGameServer(io) {
       room?.switchWeapon(socket.id, weaponId);
     });
 
+    socket.on("buy", (itemId) => {
+      const room = rooms.get(socketRooms.get(socket.id));
+      if (!room?.bombGame) return;
+      const result = room.bombGame.buy(socket.id, itemId);
+      socket.emit("buyResult", result);
+      if (result.ok) io.to(room.code).emit("snapshot", room.serialize());
+    });
+    socket.on("plantStart", () => {
+      const room = rooms.get(socketRooms.get(socket.id));
+      room?.bombGame?.startPlant(socket.id);
+    });
+    socket.on("plantCancel", () => {
+      const room = rooms.get(socketRooms.get(socket.id));
+      room?.bombGame?.cancelPlant(socket.id);
+    });
+    socket.on("defuseStart", () => {
+      const room = rooms.get(socketRooms.get(socket.id));
+      room?.bombGame?.startDefuse(socket.id);
+    });
+    socket.on("defuseCancel", () => {
+      const room = rooms.get(socketRooms.get(socket.id));
+      room?.bombGame?.cancelDefuse(socket.id);
+    });
+
     socket.on("shoot", (payload) => {
       const roomCode = socketRooms.get(socket.id);
       const room = rooms.get(roomCode);
@@ -641,10 +681,14 @@ export function registerGameServer(io) {
         rooms.delete(roomCode);
         continue;
       }
-      for (const event of events) {
-        io.to(roomCode).emit(event.type, event);
+      for (const ev of events) {
+        if (ev.type === "shot") {
+          io.to(roomCode).emit("shot", ev);
+        } else {
+          io.to(roomCode).emit(ev.type, ev);
+        }
+        io.to(roomCode).emit("snapshot", room.serialize());
       }
-      io.to(roomCode).emit("snapshot", room.serialize());
     }
   }, SNAPSHOT_MS);
 }
