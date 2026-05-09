@@ -246,6 +246,7 @@ class GameRoom {
   shoot(id, payload) {
     const player = this.players.get(id);
     if (!player || !player.alive) return null;
+    if (this.bombGame && (this.bombGame.phase === "freeze" || this.bombGame.phase === "end" || this.bombGame.phase === "over")) return null;
     const weapon = WEAPONS[player.weapon] || WEAPONS.sentinel;
     const now = Date.now();
     if (now < player.nextShotAt) return null;
@@ -468,7 +469,11 @@ class GameRoom {
   }
 
   pickBotTarget(bot) {
-    const targets = Array.from(this.players.values()).filter((player) => player.id !== bot.id && player.alive);
+    const targets = Array.from(this.players.values()).filter((player) => {
+      if (player.id === bot.id || !player.alive) return false;
+      if (this.mode === "bomb" && bot.team && player.team === bot.team) return false;
+      return true;
+    });
     const humans = targets.filter((player) => !player.isBot);
     const pool = humans.length ? humans : targets;
     return pool.sort((a, b) => distance2d(bot.pos, a.pos) - distance2d(bot.pos, b.pos))[0] || null;
