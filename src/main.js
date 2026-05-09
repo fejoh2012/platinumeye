@@ -258,6 +258,8 @@ const state = {
   }
 };
 
+let _buyMenuLastCash = -1;
+
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.05, 320);
 camera.rotation.order = "YXZ";
@@ -2911,8 +2913,13 @@ function wireSocket(socket) {
     dom.roomCode.textContent = snapshot.roomCode;
     if (snapshot.mapId && snapshot.mapId !== state.arena.id) {
       state.mapId = snapshot.mapId;
-      applyMap(getMap(snapshot.mapId));
+      const newArena = getMap(snapshot.mapId);
+      applyMap(newArena);
       if (dom.mapName) dom.mapName.textContent = state.arena.name;
+      if (newArena.mode !== "bomb") {
+        state.bomb.mode = "deathmatch";
+        state.bomb.phase = null;
+      }
     }
     state.players = new Map(snapshot.players.map((player) => [player.id, player]));
     for (const pickup of snapshot.pickups) {
@@ -2922,7 +2929,12 @@ function wireSocket(socket) {
     if (local) {
       applyLocalPlayer(local);
     }
-    if (snapshot.bombRound) applyBombRound(snapshot.bombRound, snapshot.players);
+    if (snapshot.bombRound) {
+      applyBombRound(snapshot.bombRound, snapshot.players);
+    } else if (state.bomb.mode !== "deathmatch") {
+      state.bomb.mode = "deathmatch";
+      state.bomb.phase = null;
+    }
     syncRemoteAgents();
     syncPickupMeshes();
     renderScoreboard(snapshot.players);
@@ -2961,6 +2973,10 @@ function wireSocket(socket) {
     state.bomb.bombCarrierId = null;
     state.bomb.plantHeld = false;
     state.bomb.defuseHeld = false;
+    if (data.cashByPlayer && state.playerId) {
+      const myCash = data.cashByPlayer[state.playerId];
+      if (myCash != null) state.bomb.cash = myCash;
+    }
   });
 
   socket.on("roundEnd", (data) => {
@@ -3986,8 +4002,6 @@ function updateHud() {
   }
   drawMinimap();
 }
-
-let _buyMenuLastCash = -1;
 
 function updateBombHud() {
   const b = state.bomb;

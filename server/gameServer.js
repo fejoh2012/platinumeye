@@ -32,9 +32,9 @@ import {
 const COLORS = ["#e8c15c", "#5fd2a5", "#ec6f5e", "#75a9ff", "#d995f6", "#efef8a", "#ff9f57", "#8ee0e4"];
 const ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const BOT_PROFILES = [
-  { key: "atlas", name: "Atlas", avatarId: "character-d", weapon: "cyclone", speed: 4.1, reactionMs: 820, aimError: 0.095, shotPauseMs: 340, shotJitterMs: 220, pressure: 0.46 },
-  { key: "vesper", name: "Vesper", avatarId: "character-k", weapon: "argus", speed: 3.9, reactionMs: 940, aimError: 0.11, shotPauseMs: 520, shotJitterMs: 300, pressure: 0.42 },
-  { key: "cipher", name: "Cipher", avatarId: "character-q", weapon: "sentinel", speed: 4.25, reactionMs: 760, aimError: 0.085, shotPauseMs: 300, shotJitterMs: 220, pressure: 0.5 }
+  { key: "atlas", name: "Atlas", avatarId: "character-d", weapon: "cyclone", speed: 3.6, reactionMs: 1400, aimError: 0.22, shotPauseMs: 700, shotJitterMs: 480, pressure: 0.32 },
+  { key: "vesper", name: "Vesper", avatarId: "character-k", weapon: "argus", speed: 3.4, reactionMs: 1700, aimError: 0.28, shotPauseMs: 900, shotJitterMs: 600, pressure: 0.28 },
+  { key: "cipher", name: "Cipher", avatarId: "character-q", weapon: "sentinel", speed: 3.7, reactionMs: 1200, aimError: 0.19, shotPauseMs: 650, shotJitterMs: 440, pressure: 0.35 }
 ];
 const BOT_SPAWN_GRACE_MS = 1700;
 
@@ -692,8 +692,8 @@ export function registerGameServer(io) {
         } else {
           io.to(roomCode).emit(ev.type, ev);
         }
-        io.to(roomCode).emit("snapshot", room.serialize());
       }
+      io.to(roomCode).emit("snapshot", room.serialize());
     }
   }, SNAPSHOT_MS);
 }

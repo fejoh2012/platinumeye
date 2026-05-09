@@ -65,7 +65,10 @@ export class BombGame {
 
     this.phase = PHASE.FREEZE;
     this.phaseEndsAt = Date.now() + ROUND_CONFIG.freezeMs;
-    this.push("roundStart", { round: this.roundNum, scores: this.scores, freezeUntil: this.phaseEndsAt });
+    const cashByPlayer = Object.fromEntries(
+      [...this.room.players.values()].map(p => [p.id, p.cash || 0])
+    );
+    this.push("roundStart", { round: this.roundNum, scores: this.scores, freezeUntil: this.phaseEndsAt, cashByPlayer });
   }
 
   endRound(winner) {
