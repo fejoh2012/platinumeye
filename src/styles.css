@@ -1230,7 +1230,7 @@ input {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(10,14,10,0.94);
+  background: rgba(18,24,18,0.97);
   border: 1px solid rgba(232,193,92,0.35);
   border-radius: 6px;
   padding: 1.2rem;
@@ -1260,19 +1260,23 @@ input {
 }
 
 .buy-item {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.22);
   border-radius: 4px;
   padding: 0.5rem 0.7rem;
   cursor: pointer;
   color: #f2edca;
   text-align: left;
   font-family: inherit;
-  transition: background 0.1s;
+  transition: background 0.1s, border-color 0.1s;
 }
 
-.buy-item:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
-.buy-item:disabled { opacity: 0.35; cursor: not-allowed; }
+.buy-item:hover:not(:disabled) {
+  background: rgba(255,255,255,0.18);
+  border-color: #e3bd59;
+}
+.buy-item:disabled { opacity: 0.55; cursor: not-allowed; color: #888; }
+.buy-item:disabled .buy-item-cost { color: #666; }
 
 .buy-item-name { font-size: 0.78rem; font-weight: 700; display: block; }
 .buy-item-cost { font-size: 0.68rem; color: #5fd2a5; display: block; margin-top: 0.15rem; }
