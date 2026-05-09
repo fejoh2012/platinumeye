@@ -164,6 +164,7 @@ const dom = {
   feed: document.querySelector("#feed"),
   lockPrompt: document.querySelector("#lockPrompt"),
   deathScreen: document.querySelector("#deathScreen"),
+  deathTitle: document.querySelector("#deathTitle"),
   respawnTimer: document.querySelector("#respawnTimer"),
   hitMarker: document.querySelector("#hitMarker"),
   damageFlash: document.querySelector("#damageFlash"),
@@ -224,7 +225,20 @@ const state = {
   lastStepAt: 0,
   stepSide: 0,
   ads: false,
-  adsFactor: 0
+  adsFactor: 0,
+  bomb: {
+    mode: "deathmatch",    // "deathmatch" | "bomb"
+    phase: null,           // "freeze" | "live" | "planted" | "end" | "over"
+    round: 0,
+    scores: { attack: 0, defend: 0 },
+    phaseEndsAt: 0,
+    bombCarrierId: null,
+    bombPlanted: null,
+    myTeam: null,
+    cash: 0,
+    plantHeld: false,
+    defuseHeld: false,
+  }
 };
 
 const scene = new THREE.Scene();
@@ -2639,6 +2653,14 @@ function bindEvents() {
     if (weaponIndex >= 0 && weaponIndex < WEAPON_ORDER.length) {
       selectWeapon(WEAPON_ORDER[weaponIndex]);
     }
+    if (event.code === "KeyF" && state.bomb.mode === "bomb") {
+      state.bomb.plantHeld = true;
+      if (state.bomb.myTeam === "attack" && state.bomb.bombCarrierId === state.playerId) {
+        state.socket.emit("plantStart");
+      } else if (state.bomb.myTeam === "defend" && state.bomb.bombPlanted) {
+        state.socket.emit("defuseStart");
+      }
+    }
     state.input.keys.add(event.code);
   });
   window.addEventListener("keyup", (event) => {
@@ -2646,6 +2668,11 @@ function bindEvents() {
       event.preventDefault();
       dom.scoreboard.classList.remove("is-open");
       return;
+    }
+    if (event.code === "KeyF") {
+      state.bomb.plantHeld = false;
+      state.socket.emit("plantCancel");
+      state.socket.emit("defuseCancel");
     }
     state.input.keys.delete(event.code);
   });
@@ -2855,6 +2882,7 @@ function wireSocket(socket) {
     if (local) {
       applyLocalPlayer(local);
     }
+    if (snapshot.bombRound) applyBombRound(snapshot.bombRound, snapshot.players);
     syncRemoteAgents();
     syncPickupMeshes();
     renderScoreboard(snapshot.players);
@@ -2883,6 +2911,58 @@ function wireSocket(socket) {
   socket.on("dry", () => {
     playSound("dry");
   });
+
+  socket.on("roundStart", (data) => {
+    state.bomb.round = data.round;
+    state.bomb.scores = data.scores;
+    state.bomb.phase = "freeze";
+    state.bomb.phaseEndsAt = data.freezeUntil;
+    state.bomb.bombPlanted = null;
+    state.bomb.plantHeld = false;
+    state.bomb.defuseHeld = false;
+  });
+
+  socket.on("roundEnd", (data) => {
+    state.bomb.scores = data.scores;
+    state.bomb.phase = "end";
+    showRoundResult(data.winner);
+  });
+
+  socket.on("bombPlanted", (data) => {
+    state.bomb.bombPlanted = data;
+    state.bomb.phase = "planted";
+    state.bomb.phaseEndsAt = data.endsAt;
+    playSound("bombPlanted");
+  });
+
+  socket.on("bombDefused", () => {
+    state.bomb.bombPlanted = null;
+    playSound("bombDefused");
+  });
+
+  socket.on("bombExplode", () => {
+    state.bomb.bombPlanted = null;
+    playSound("bombExplode");
+  });
+
+  socket.on("matchOver", (data) => {
+    state.bomb.phase = "over";
+    state.bomb.scores = data.scores;
+  });
+}
+
+function applyBombRound(round, players) {
+  state.bomb.phase = round.phase;
+  state.bomb.round = round.round;
+  state.bomb.scores = round.scores;
+  state.bomb.phaseEndsAt = round.phaseEndsAt;
+  state.bomb.bombCarrierId = round.bombCarrierId;
+  state.bomb.bombPlanted = round.bombPlanted;
+  const me = players.find(p => p.id === state.playerId);
+  if (me) {
+    state.bomb.myTeam = me.team;
+    state.bomb.cash = me.cash || 0;
+  }
 }
 
 function applyLocalPlayer(player) {
@@ -3841,6 +3921,13 @@ function updateHud() {
   dom.ammoValue.textContent = ammo === "inf" ? "--" : String(ammo || 0).padStart(2, "0");
   renderWeaponInventory();
 
+  // in bomb mode, show "ELIMINATED" instead of respawn timer
+  if (state.bomb.mode === "bomb" && !state.local.alive) {
+    dom.deathScreen.classList.remove("is-hidden");
+    dom.deathTitle.textContent = "ELIMINATED";
+    dom.respawnTimer.textContent = "";
+    return; // skip rest of death screen logic
+  }
   if (!state.local.alive && state.local.respawnAt) {
     dom.deathScreen.classList.remove("is-hidden");
     const seconds = Math.max(0, (state.local.respawnAt - Date.now()) / 1000);
