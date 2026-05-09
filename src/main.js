@@ -4049,27 +4049,30 @@ function closeBuyMenu() {
 }
 
 function renderBuyMenu() {
-  if (!dom.buyMenu || !dom.buyGrid) return;
+  if (!dom.buyMenu || !dom.buyGrid) {
+    console.warn("renderBuyMenu: dom.buyMenu or dom.buyGrid is null");
+    return;
+  }
   dom.buyMenu.classList.remove("is-hidden");
   if (state.bomb.cash === _buyMenuLastCash) return;
   _buyMenuLastCash = state.bomb.cash;
   dom.buyCash.textContent = `$${state.bomb.cash}`;
-  dom.buyGrid.innerHTML = SHOP_ITEMS.map(item => {
+
+  dom.buyGrid.innerHTML = "";
+  for (const item of SHOP_ITEMS) {
     const label = item.type === "weapon"
       ? (WEAPONS[item.id]?.name || item.id)
       : item.id === "armor50" ? "Light Armor" : "Full Armor";
     const canAfford = state.bomb.cash >= item.cost;
-    return `<button class="buy-item" data-item="${item.id}" ${canAfford ? "" : "disabled"}>
-      <span class="buy-item-name">${label}</span>
-      <span class="buy-item-cost">$${item.cost}</span>
-    </button>`;
-  }).join("");
-
-  for (const btn of dom.buyGrid.querySelectorAll(".buy-item")) {
-    btn.addEventListener("click", () => {
-      state.socket.emit("buy", btn.dataset.item);
-    });
+    const btn = document.createElement("button");
+    btn.className = "buy-item";
+    btn.dataset.item = item.id;
+    btn.disabled = !canAfford;
+    btn.innerHTML = `<span class="buy-item-name">${label}</span><span class="buy-item-cost">$${item.cost}</span>`;
+    btn.addEventListener("click", () => state.socket.emit("buy", item.id));
+    dom.buyGrid.appendChild(btn);
   }
+  console.log("renderBuyMenu: rendered", SHOP_ITEMS.length, "items, cash =", state.bomb.cash, "grid children =", dom.buyGrid.children.length);
 }
 
 function updateInteractBar() {
