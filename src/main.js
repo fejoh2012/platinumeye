@@ -2671,10 +2671,12 @@ function bindEvents() {
     }
     if (event.code === "KeyF" && state.bomb.mode === "bomb") {
       state.bomb.plantHeld = true;
+      state.bomb._plantStart = Date.now();
       if (state.bomb.myTeam === "attack" && state.bomb.bombCarrierId === state.playerId) {
         state.socket.emit("plantStart");
       } else if (state.bomb.myTeam === "defend" && state.bomb.bombPlanted) {
         state.bomb.defuseHeld = true;
+        state.bomb._defuseStart = Date.now();
         state.socket.emit("defuseStart");
       }
     }
@@ -2689,6 +2691,8 @@ function bindEvents() {
     if (event.code === "KeyF") {
       state.bomb.plantHeld = false;
       state.bomb.defuseHeld = false;
+      state.bomb._plantStart = null;
+      state.bomb._defuseStart = null;
       if (state.socket && state.bomb.mode === "bomb") {
         state.socket.emit("plantCancel");
         state.socket.emit("defuseCancel");
@@ -3971,6 +3975,7 @@ function updateBombHud() {
   if (b.mode !== "bomb") {
     dom.bombHud?.classList.add("is-hidden");
     dom.buyMenu?.classList.add("is-hidden");
+    _buyMenuLastCash = -1;
     return;
   }
   dom.bombHud?.classList.remove("is-hidden");
@@ -4009,15 +4014,20 @@ function updateBombHud() {
     renderBuyMenu();
   } else {
     dom.buyMenu?.classList.add("is-hidden");
+    _buyMenuLastCash = -1;
   }
 
   // interact bar
   updateInteractBar();
 }
 
+let _buyMenuLastCash = -1;
+
 function renderBuyMenu() {
   if (!dom.buyMenu || !dom.buyGrid) return;
   dom.buyMenu.classList.remove("is-hidden");
+  if (state.bomb.cash === _buyMenuLastCash) return;
+  _buyMenuLastCash = state.bomb.cash;
   dom.buyCash.textContent = `$${state.bomb.cash}`;
   dom.buyGrid.innerHTML = SHOP_ITEMS.map(item => {
     const label = item.type === "weapon"
@@ -4055,10 +4065,11 @@ function updateInteractBar() {
 }
 
 function showRoundResult(winner) {
-  if (!dom.roundBanner) return;
+  if (!dom.roundBanner || !state.bomb.myTeam) return;
   const won = winner === state.bomb.myTeam;
   dom.roundBanner.textContent = won ? "ROUND WIN" : "ROUND LOSS";
-  dom.roundBanner.className = "round-banner " + (won ? "win" : "loss");
+  dom.roundBanner.className = "round-banner is-hidden " + (won ? "win" : "loss");
+  void dom.roundBanner.offsetWidth; // force reflow to restart animation
   dom.roundBanner.classList.remove("is-hidden");
   setTimeout(() => dom.roundBanner.classList.add("is-hidden"), 3500);
 }
