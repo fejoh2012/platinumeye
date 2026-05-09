@@ -2658,6 +2658,7 @@ function bindEvents() {
       if (state.bomb.myTeam === "attack" && state.bomb.bombCarrierId === state.playerId) {
         state.socket.emit("plantStart");
       } else if (state.bomb.myTeam === "defend" && state.bomb.bombPlanted) {
+        state.bomb.defuseHeld = true;
         state.socket.emit("defuseStart");
       }
     }
@@ -2671,8 +2672,11 @@ function bindEvents() {
     }
     if (event.code === "KeyF") {
       state.bomb.plantHeld = false;
-      state.socket.emit("plantCancel");
-      state.socket.emit("defuseCancel");
+      state.bomb.defuseHeld = false;
+      if (state.socket && state.bomb.mode === "bomb") {
+        state.socket.emit("plantCancel");
+        state.socket.emit("defuseCancel");
+      }
     }
     state.input.keys.delete(event.code);
   });
@@ -2918,6 +2922,7 @@ function wireSocket(socket) {
     state.bomb.phase = "freeze";
     state.bomb.phaseEndsAt = data.freezeUntil;
     state.bomb.bombPlanted = null;
+    state.bomb.bombCarrierId = null;
     state.bomb.plantHeld = false;
     state.bomb.defuseHeld = false;
   });
@@ -2949,9 +2954,15 @@ function wireSocket(socket) {
     state.bomb.phase = "over";
     state.bomb.scores = data.scores;
   });
+
+  socket.on("phaseChange", (data) => {
+    state.bomb.phase = data.phase;
+    state.bomb.phaseEndsAt = data.endsAt;
+  });
 }
 
 function applyBombRound(round, players) {
+  state.bomb.mode = round.mode || "deathmatch";
   state.bomb.phase = round.phase;
   state.bomb.round = round.round;
   state.bomb.scores = round.scores;
